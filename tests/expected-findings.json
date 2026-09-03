@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Expected Audit Findings Benchmark Schema",
+  "description": "Scaffolding structure for expected evidence and audit findings used in automated evaluation.",
+  "benchmarks": [
+    {
+      "site_id": "example-brand-001",
+      "expected_category_scores": {
+        "crawl_render_accessibility": 85,
+        "structured_data": 40,
+        "fact_quality": 75,
+        "freshness_corroboration": 60,
+        "entity_identity": 90,
+        "engagement_readiness": 30
+      },
+      "expected_findings_keys": [
+        "MISSING_SCHEMA_PRODUCT",
+        "MISSING_LLMS_TXT",
+        "EXPLICIT_BOT_ALLOW"
+      ]
+    }
+  ]
+}

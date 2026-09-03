@@ -1,0 +1,26 @@
+# Brand AI Readiness Audit Default Configuration
+
+version: "0.1.0"
+
+crawler:
+  user_agents:
+    - "GPTBot"
+    - "ClaudeBot"
+    - "PerplexityBot"
+    - "Google-Extended"
+    - "Bytespider"
+  timeout_seconds: 30
+  max_depth: 3
+  render_js: true
+
+scoring_weights:
+  crawl_render_accessibility: 0.20
+  structured_data: 0.20
+  fact_quality: 0.20
+  freshness_corroboration: 0.15
+  entity_identity: 0.15
+  engagement_readiness: 0.10
+
+thresholds:
+  critical_severity_cap: 40
+  stale_content_months: 12

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test Sites Registry",
+  "description": "Scaffolding registry of target web properties for AI readiness audit benchmarking.",
+  "sites": [
+    {
+      "id": "example-brand-001",
+      "name": "Example E-Commerce Brand",
+      "url": "https://example.com",
+      "category": "e-commerce",
+      "expected_challenges": [
+        "CSR rendering delay",
+        "Missing Product JSON-LD"
+      ]
+    },
+    {
+      "id": "example-brand-002",
+      "name": "Example SaaS Platform",
+      "url": "https://example.org",
+      "category": "saas",
+      "expected_challenges": [
+        "robots.txt AI bot disallow",
+        "Missing llms.txt"
+      ]
+    }
+  ]
+}
