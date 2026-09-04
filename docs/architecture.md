@@ -1,101 +1,52 @@
-# System Architecture Documentation
+# Architecture
 
-## Overview
+Read-only pipeline. One URL in. One Adobe-schema report out.
 
-The **Brand AI Readiness Audit** system follows a modular, evidence-first pipeline designed to assess web properties for AI discoverability and machine readability.
-
----
-
-## High-Level Pipeline Diagram
+## Two halves
 
 ```
-[ Target Website ]
-       │
-       ▼
-┌─────────────────────────────────────────┐
-│       1. Crawl & Render Pipeline        │
-│   (Fetch HTML, JS Render, HTTP Headers) │
-└────────────────────┬────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────┐
-│          2. Evidence Collection         │
-│  (DOM Snapshots, Schemas, Text Blocks)  │
-└────────────────────┬────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────┐
-│       3. Specialized Audit Skills       │
-│  (Crawl, Data, Quality, Entity, etc.)   │
-└────────────────────┬────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────┐
-│        4. Evidence Validation           │
-│   (Verify Deterministic Fact Grounding) │
-└────────────────────┬────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────┐
-│      5. Scoring & Prioritization        │
-│    (Category Scores & Severity Matrix)  │
-└────────────────────┬────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────┐
-│            6. Recommendations           │
-│      (Actionable Remediation Steps)     │
-└────────────────────┬────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────┐
-│            7. Final Report              │
-│       (JSON Marketplace Artifact / MD)  │
-└─────────────────────────────────────────┘
+Off-site discoverability          On-site engagement
+Reach -> Read -> Extract          Visitor lands (often on a deep URL)
+      -> Trust -> Use             Who / what / next?
+                                  Nav, breadcrumbs, CTA
 ```
 
----
+Mapped to skills:
 
-## Architectural Component Separation
+| Stage | Skill |
+| :--- | :--- |
+| Reach / Read | `crawl-render-audit` |
+| Extract | `structured-data-audit`, `fact-quality-audit` |
+| Trust | `freshness-corroboration` |
+| Use | `entity-identity-audit` |
+| On-site | `engagement-audit` |
+| Compose | `audit-orchestrator` (only entrypoint) |
 
-To prevent model hallucination and ensure reproducible audits, the architecture strictly segregates responsibilities across five distinct layers:
+## Runtime pipeline
 
-### 1. Deterministic Checks
-- **Responsibility:** Execute non-probabilistic parsing and rule-based verification.
-- **Operations:**
-  - Parsing `robots.txt` rules against standard AI User-Agent strings (`GPTBot`, `ClaudeBot`, `PerplexityBot`).
-  - Schema syntax validation (JSON-LD parsing, Microdata extraction, spec compliance).
-  - HTTP header inspection (`X-Robots-Tag`, `Content-Type`, `Last-Modified`).
-  - Pre-rendering vs. Post-rendering DOM diff calculation.
-  - Checking physical file availability (`/llms.txt`, `/sitemap.xml`, `/openapi.json`).
+```
+URL
+  -> robots.txt + homepage fetch (stdlib HTTP)
+  -> snapshot (HTML, headers, discovered links, JSON-LD blocks)
+  -> optional Playwright DOM (only if already installed; never in ZIP)
+  -> 6 specialist skills (same snapshot; no second crawl)
+  -> orchestrator merges, dedupes, sorts by severity x impact
+  -> one JSON report (findings + suggested_action objects)
+```
 
-### 2. Evidence Collection & Storage
-- **Responsibility:** Capture and persist raw, immutable artifacts extracted during crawling.
-- **Artifacts:**
-  - Raw HTML responses and rendered DOM snapshots.
-  - Extracted Schema JSON-LD payloads.
-  - Normalized text blocks and heading trees.
-  - HTTP request/response header dumps.
-- **Rule:** LLM reasoning components may only inspect data residing within the Evidence Store.
+## Layers
 
-### 3. LLM Reasoning
-- **Responsibility:** Perform qualitative and semantic evaluations where deterministic rules are insufficient.
-- **Operations:**
-  - Analyzing text claims for ambiguity, vagueness, or contradiction.
-  - Assessing whether product specs or policy details are clear enough for AI retrieval.
-  - Evaluating entity description consistency across unstructured narrative text.
-  - Formulating tailored remediation recommendations.
-- **Constraint:** LLM reasoning outputs must explicitly cite the evidence ID supporting every observation.
+1. **Deterministic checks** - robots, status, JSON-LD parse, dates, NAP strings, CTA/link counts.
+2. **Evidence store** - immutable snippets, URLs, headers. LLM may only read this.
+3. **Targeted reasoning** - first-impression clarity, claim ambiguity. Every observation cites evidence.
+4. **Composer** - Adobe report. Extra fields allowed. 0-100 scores are not the output.
 
-### 4. Scoring Engine
-- **Responsibility:** Compute standardized sub-scores (0–100) and overall brand readiness indexes.
-- **Formula Model:**
-  - Sub-scores are derived from deterministic pass/fail ratios combined with weighted LLM quality ratings.
-  - Critical severity failures (e.g., total AI crawler block in `robots.txt`) hard-cap the maximum category score.
+## Packaging
 
-### 5. Recommendations & Final Report
-- **Responsibility:** Aggregate audit findings into structured JSON artifacts and markdown executive summaries.
-- **Outputs:**
-  - Categorized list of findings with severity ratings (Critical, High, Medium, Low).
-  - Step-by-step remediation instructions for engineering and content teams.
-  - Exportable audit report conforming to Agent Skill Marketplace output standards.
+- Python stdlib for HTTP/HTML by default (`urllib` + `html.parser`).
+- Playwright optional. Chromium binary must not ship in the ZIP (cap 50 MB; we budget 45).
+- Submission ZIP contains `marketplace.json` + `skills/` (+ lean `scripts/`). Test GUI stays out of the judged ZIP.
+
+## Guardrails
+
+Read-only. Respect robots.txt. No auth. No writes. < 5 minutes. Recommend-only.
