@@ -1,31 +1,30 @@
 ---
-name: Entity Identity & Consistency
-description: Audits brand entity attributes, NAP (Name, Address, Phone) consistency, Knowledge Graph alignment, and canonical branding.
+name: entity-identity-audit
+description: >-
+  Check that Organization name, sameAs links, and NAP stay consistent so AI
+  systems can attach facts to one entity.
+license: MIT
 ---
 
-# Entity Identity & Consistency Skill
+# entity-identity-audit
 
-## Purpose
-Audits brand identity signals to ensure AI Knowledge Graphs and search engines can construct a unified, canonical entity model for the brand without entity fragmentation.
+Use specialist. Invoked by `audit-orchestrator`.
 
-## When to Use
-Invoked by `audit-orchestrator` during entity validation.
+## When to use
 
-## High-Level Responsibilities
-- Audit Name, Address, Phone (NAP) uniformity across domain pages.
-- Validate `Organization` schema `sameAs` array links (social profiles, Wikipedia, Wikidata).
-- Detect conflicting brand names, obsolete trade names, or mismatched logo asset URLs.
-- Check Knowledge Graph entity alignment.
+When a snapshot exists and entity identity must be checked.
 
 ## Inputs
-- `extracted_entity_attributes` (JSON object containing scraped brand names, addresses, social URIs)
-- `canonical_brand_profile` (expected brand entity configuration)
 
-## Outputs
-- Entity Consistency sub-score (0–100)
-- Identity conflict findings and missing `sameAs` canonical link list
+- `snapshot`: HTML, JSON-LD Organization, footer/contact text
 
-## Evidence Expectations
-- Extracted NAP text blocks
-- `sameAs` URL list extracts
-- Wikidata / Wikipedia lookup response logs
+## Procedure
+
+1. Collect brand/Organization name from title, H1, JSON-LD `name`. Flag conflicts (EI-01).
+2. Fetch `sameAs` URLs. Flag 404s or pages whose title is a different entity (EI-02).
+3. Collect NAP (name, address, phone) from footer, contact, JSON-LD. Flag cross-page differences (EI-03).
+4. Emit findings with the conflicting strings and URLs, severity, suggested action (one canonical name + working sameAs).
+
+## Output
+
+Array of findings (`id`, `title`, `severity`, `evidence`, `suggested_action`).
