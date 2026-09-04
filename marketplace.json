@@ -1,60 +1,44 @@
 {
-  "$schema": "https://json.schemastore.org/package.json",
   "name": "brand-ai-readiness-audit",
-  "version": "0.1.0",
-  "description": "Agent Skill Marketplace package for auditing brand websites across AI discoverability, fact quality, freshness, entity identity, structured data, crawl/render accessibility, and on-site AI engagement.",
-  "author": "Shivam",
+  "version": "1.0.0",
+  "description": "Read-only Agent Skill Marketplace that audits any public website for AI discoverability and on-site engagement, then emits one evidence-backed findings report.",
   "license": "MIT",
-  "entrypoint": "skills/audit-orchestrator/SKILL.md",
   "skills": [
     {
       "id": "audit-orchestrator",
-      "name": "Audit Orchestrator Skill",
-      "path": "skills/audit-orchestrator/SKILL.md",
-      "isEntrypoint": true,
-      "description": "Master orchestrator skill coordinating end-to-end brand AI readiness audits by invoking specialized audit skills."
+      "path": "skills/audit-orchestrator",
+      "entrypoint": true,
+      "description": "Entrypoint. Fetches a site snapshot, runs specialist skills, and emits one Adobe-schema audit report."
     },
     {
       "id": "crawl-render-audit",
-      "name": "Crawl & Render Audit Skill",
-      "path": "skills/crawl-render-audit/SKILL.md",
-      "isEntrypoint": false,
-      "description": "Audits website robots.txt, sitemaps, HTTP headers, DOM rendering, and crawler accessibility for AI user agents."
+      "path": "skills/crawl-render-audit",
+      "description": "Reach/Read. robots.txt, HTTP status/redirects, noindex, optional HTML vs rendered DOM gap."
     },
     {
       "id": "structured-data-audit",
-      "name": "Structured Data Audit Skill",
-      "path": "skills/structured-data-audit/SKILL.md",
-      "isEntrypoint": false,
-      "description": "Validates Schema.org JSON-LD, Microdata, OpenGraph, and semantic markup for AI entity extraction."
+      "path": "skills/structured-data-audit",
+      "description": "Extract. Parse JSON-LD. Flag invalid or incomplete Product/Offer markup on product pages. Never flag missing schema blindly."
     },
     {
       "id": "fact-quality-audit",
-      "name": "Fact Quality Audit Skill",
-      "path": "skills/fact-quality-audit/SKILL.md",
-      "isEntrypoint": false,
-      "description": "Evaluates factual precision, claim verifiability, content clarity, and hallucination vulnerability across brand assets."
+      "path": "skills/fact-quality-audit",
+      "description": "Extract. Claims, contradictions, missing units, ungrounded superlatives."
     },
     {
       "id": "freshness-corroboration",
-      "name": "Freshness & Corroboration Skill",
-      "path": "skills/freshness-corroboration/SKILL.md",
-      "isEntrypoint": false,
-      "description": "Checks timestamp metadata, update cadence, external citation consistency, and cross-source corroboration."
+      "path": "skills/freshness-corroboration",
+      "description": "Trust. Date signals, stale content, 2-3 public corroboration sources."
     },
     {
       "id": "entity-identity-audit",
-      "name": "Entity Identity & Consistency Skill",
-      "path": "skills/entity-identity-audit/SKILL.md",
-      "isEntrypoint": false,
-      "description": "Audits brand entity attributes, NAP (Name, Address, Phone) consistency, Knowledge Graph alignment, and canonical branding."
+      "path": "skills/entity-identity-audit",
+      "description": "Use. Organization name, sameAs, NAP consistency across pages."
     },
     {
       "id": "engagement-audit",
-      "name": "On-Site AI Engagement Audit Skill",
-      "path": "skills/engagement-audit/SKILL.md",
-      "isEntrypoint": false,
-      "description": "Assesses on-site search readiness, conversational endpoint availability, and interactive AI agent interoperability."
+      "path": "skills/engagement-audit",
+      "description": "On-site. First impression, navigation, deep-page context/breadcrumbs, CTA actionability. Not llms.txt or OpenAPI."
     }
   ]
 }
