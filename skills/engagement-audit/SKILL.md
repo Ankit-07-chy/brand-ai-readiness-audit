@@ -1,31 +1,32 @@
 ---
-name: On-Site AI Engagement Audit
-description: Assesses on-site search readiness, conversational endpoint availability, llms.txt compliance, and interactive AI agent interoperability.
+name: engagement-audit
+description: >-
+  Check why a visitor who arrives (often on a deep URL) cannot orient or act:
+  who/what/next, navigation, breadcrumbs, CTAs. Not llms.txt or OpenAPI.
+license: MIT
 ---
 
-# On-Site AI Engagement Audit Skill
+# engagement-audit
 
-## Purpose
-Evaluates how effectively autonomous AI agents can interact with, search, and navigate a brand's website to perform tasks or retrieve machine-formatted developer/product metadata.
+On-site engagement specialist. Invoked by `audit-orchestrator`.
 
-## When to Use
-Invoked by `audit-orchestrator` during the interactive agent readiness evaluation.
+## When to use
 
-## High-Level Responsibilities
-- Check for `/llms.txt` and `/llms-full.txt` standard file presence and formatting.
-- Audit OpenAPI / REST endpoint discovery (`/openapi.json`, `/.well-known/ai-plugin.json`).
-- Evaluate search form accessibility, URL query parameter transparency, and response formatting.
-- Assess conversational assistant / chatbot interoperability.
+When a snapshot exists and on-site orientation/action must be checked.
 
 ## Inputs
-- `domain_root_url` (string)
-- `discovered_api_specs` (array of OpenAPI schemas)
 
-## Outputs
-- AI Engagement sub-score (0–100)
-- Protocol compliance checklist (`llms.txt`, OpenAPI, search parameters)
+- `snapshot`: HTML of homepage and interior pages
 
-## Evidence Expectations
-- `/llms.txt` GET response headers and body
-- OpenAPI endpoint probe logs
-- Search form DOM element attributes
+## Procedure
+
+1. On the landing page and each interior page, extract H1, first subhead, and primary CTA. Flag if who, what, or next is missing in the first screenful (EG-01).
+2. Collect nav labels. Compare to claimed offerings (H1/H2). Flag jobs the site claims that nav does not cover (EG-02).
+3. On non-homepage URLs, look for breadcrumbs or equivalent parent context. Flag deep pages with no way back to a parent (EG-03).
+4. Classify the primary CTA destination (form, product, contact, signup vs another article). Flag "learn more" loops with no action (EG-04).
+5. Do **not** flag missing `/llms.txt`, OpenAPI, or chat widgets as core defects. Those may only appear as low-priority proactive suggestions.
+6. Emit findings with URL, quoted heading/CTA/nav evidence, severity, suggested action.
+
+## Output
+
+Array of findings (`id`, `title`, `severity`, `evidence`, `suggested_action`).
