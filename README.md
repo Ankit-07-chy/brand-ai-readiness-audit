@@ -1,143 +1,98 @@
 # Brand AI Readiness Audit
 
-> **Adobe University Hackathon 2026 — Round 3 Project**  
-> An Agent Skill Marketplace package designed to perform comprehensive, evidence-first audits of brand websites for AI discoverability, factual content quality, entity consistency, structured data, and AI interaction readiness.
+Adobe University Hackathon 2026 - Round 3.
 
----
+A **read-only Agent Skill Marketplace**. Give it any public website URL. It reports **why AI assistants cannot find or cite the brand** (off-site discoverability) and **why a visitor who arrives does not stay** (on-site engagement).
 
-> [!IMPORTANT]  
-> **Development Status: Initial Scaffolding Phase**  
-> This repository is currently in the scaffolding and architecture phase. The audit skills, crawler pipelines, and analytical evaluation logic defined here represent planned specifications. No active crawling or auditing logic is implemented yet.
+Output is **one JSON audit report** (Adobe schema). Recommend-only. Never mutates the site.
 
----
+> Scaffolding: Python check scripts are not implemented yet. This pass locks the contest contract: marketplace layout, SKILL.md format, report schema, and check definitions.
 
-## 🎯 Purpose & Problem Statement
+## What this marketplace must do
 
-As Generative Engine Optimization (GEO), Answer Engine Optimization (AEO), and autonomous AI agents become primary discovery channels for consumers, brands face a critical challenge: **How visible, readable, accurate, and authoritative is their digital presence to AI models and agents?**
+**Detect** both halves of the Round 2 problem:
 
-Traditional SEO tools focus on search engine keyword rankings and page speed performance. They fail to evaluate:
-- **AI Accessibility & Rendering:** Can LLM web crawlers (e.g., GPTBot, ClaudeBot, PerplexityBot) parse and execute client-side JS to reach key brand data?
-- **Factual Machine-Readability:** Are claims, product specs, pricing, and policies clear and un-ambiguous enough to prevent AI hallucinations?
-- **Entity Identity & Consistency:** Does the brand present a unified, canonical entity model that Knowledge Graphs can reliably absorb?
-- **Freshness & Corroboration:** Are update timestamps explicit, and is the brand's core data corroborated across authoritative web sources?
+1. **Off-site discoverability** - Reach -> Read -> Extract -> Trust -> Use
+2. **On-site engagement** - a visitor (often landing on a deep URL from an AI answer) cannot tell who this is, what they can do, or what to do next
 
-The **Brand AI Readiness Audit** package addresses these challenges by delivering an evidence-backed framework that assesses a website's readiness for the AI-driven search ecosystem.
+**Report** every finding with evidence, severity, and a suggested action (what to change and how), prioritized by impact. Suggested actions may include proactive improvements even when no explicit defect fired.
 
----
+## Skills (exactly one entrypoint)
 
-## 🏗️ High-Level Architecture
+| Skill | Role |
+| :--- | :--- |
+| `audit-orchestrator` | Entrypoint. Snapshot -> dispatch 6 specialists -> compose one report |
+| `crawl-render-audit` | Reach / Read: robots.txt, status, noindex, HTML vs DOM |
+| `structured-data-audit` | Extract: JSON-LD parse; Product/Offer completeness on product pages |
+| `fact-quality-audit` | Extract: claims, contradictions, missing units, ungrounded superlatives |
+| `freshness-corroboration` | Trust: dates, stale content, 2-3 public corroboration sources |
+| `entity-identity-audit` | Use: Organization name, `sameAs`, NAP consistency |
+| `engagement-audit` | On-site: first impression, nav, breadcrumbs, CTAs |
 
-The framework operates on an **Evidence-First Architecture** (see [`docs/decisions.md`](docs/decisions.md) - ADR-001). Deterministic checks extract verified evidence first, and LLM reasoning operates exclusively on that evidence rather than inventing ungrounded observations.
+Each folder independently satisfies [agentskills.io](https://agentskills.io/specification). `SKILL.md` `name` equals the folder name.
 
+## Report schema (Adobe floor)
+
+Required keys. Extra fields (`category`, `confidence`, `why_it_matters`, `affected_urls`) are allowed.
+
+```json
+{
+  "site": "example.com",
+  "audited_at": "2026-09-20T14:32:00Z",
+  "summary": {
+    "total_findings": 6,
+    "critical": 1,
+    "high": 2,
+    "medium": 3
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "No JSON-LD structured data on product pages",
+      "severity": "high",
+      "evidence": "Crawled 12 product pages; 0/12 contain schema.org markup.",
+      "suggested_action": {
+        "summary": "Add Product/Offer JSON-LD to every product page.",
+        "priority": "high"
+      }
+    }
+  ]
+}
 ```
-Website Under Audit
-  │
-  ▼
-Crawl & Rendering Pipeline (Playwright / HTTP Parser)
-  │
-  ▼
-Evidence Store (DOM Snapshots, Headers, Schema JSON-LD, Text Snippets)
-  │
-  ▼
-Specialized Audit Skills (Parallel Execution)
-  ├── 1. Crawl & Render Audit
-  ├── 2. Structured Data Audit
-  ├── 3. Fact Quality Audit
-  ├── 4. Freshness & Corroboration
-  ├── 5. Entity Identity & Consistency
-  └── 6. On-Site AI Engagement
-  │
-  ▼
-Evidence Validation & Normalized Scoring
-  │
-  ▼
-Prioritized Remediation & Executive Audit Report
-```
 
----
+Severity is lowercase: `critical` | `high` | `medium` | `low`. `suggested_action` is an **object**, not a string. **0-100 composite scores are not the contest output.**
 
-## 🧩 Marketplace Skills Summary
+## Guardrails
 
-The package exposes a single entrypoint skill—**`audit-orchestrator`**—which coordinates six specialized audit sub-skills:
+- Read-only. Respect `robots.txt`. Polite delays. No login, no form posts, no writes.
+- Runtime under 5 minutes. Submission ZIP <= 45 MB (Adobe cap 50 MB).
+- Default fetch is Python stdlib HTTP + HTML parse. Playwright is optional and **must not** ship Chromium in the ZIP.
+- Never report "missing schema" blindly. Never treat missing `/llms.txt` as a core defect.
+- Generalize. Do not overfit one site.
 
-| Skill | Path | Description |
-| :--- | :--- | :--- |
-| **`audit-orchestrator`** *(Entrypoint)* | [`skills/audit-orchestrator/SKILL.md`](skills/audit-orchestrator/SKILL.md) | Coordinates end-to-end audit workflow, invokes sub-skills, aggregates findings, and computes final scores. |
-| **`crawl-render-audit`** | [`skills/crawl-render-audit/SKILL.md`](skills/crawl-render-audit/SKILL.md) | Evaluates robots.txt AI rules, HTTP headers, SSR vs. CSR rendering, and crawler access limits. |
-| **`structured-data-audit`** | [`skills/structured-data-audit/SKILL.md`](skills/structured-data-audit/SKILL.md) | Inspects JSON-LD, Microdata, OpenGraph, and semantic HTML schema validity and coverage. |
-| **`fact-quality-audit`** | [`skills/fact-quality-audit/SKILL.md`](skills/fact-quality-audit/SKILL.md) | Measures claim clarity, ambiguity, factual consistency, and vulnerability to model hallucination. |
-| **`freshness-corroboration`** | [`skills/freshness-corroboration/SKILL.md`](skills/freshness-corroboration/SKILL.md) | Validates modification dates, content freshness signals, and external source corroboration. |
-| **`entity-identity-audit`** | [`skills/entity-identity-audit/SKILL.md`](skills/entity-identity-audit/SKILL.md) | Checks brand Name-Address-Phone (NAP) uniformity, Organization schema, and Knowledge Graph alignment. |
-| **`engagement-audit`** | [`skills/engagement-audit/SKILL.md`](skills/engagement-audit/SKILL.md) | Assesses readiness for direct AI agent interaction, API availability, and site search interoperability. |
-
----
-
-## 📁 Repository Structure
+## Layout
 
 ```
 brand-ai-readiness-audit/
-├── README.md                          # Project documentation and roadmap
-├── marketplace.json                   # Agent Skill Marketplace manifest
-├── LICENSE                            # MIT License
-├── .gitignore                         # Build, environment, and runtime ignore patterns
-│
-├── docs/                              # Project design and research documentation
-│   ├── audit-matrix.md                # Signal, evidence, scoring, and severity matrix
-│   ├── architecture.md                # System flow, separation of concerns, and pipeline
-│   ├── research.md                    # Research findings and tool evaluations log
-│   └── decisions.md                   # Architecture Decision Records (ADRs)
-│
-├── skills/                            # Agent Skill Marketplace definitions
-│   ├── audit-orchestrator/            # Entrypoint orchestrator skill
-│   │   └── SKILL.md
-│   ├── crawl-render-audit/            # Crawl accessibility audit skill
-│   │   ├── SKILL.md
-│   │   ├── scripts/
-│   │   └── references/
-│   ├── structured-data-audit/         # Structured data audit skill
-│   │   ├── SKILL.md
-│   │   ├── scripts/
-│   │   └── references/
-│   ├── fact-quality-audit/            # Fact & content quality audit skill
-│   │   ├── SKILL.md
-│   │   └── references/
-│   ├── freshness-corroboration/        # Content freshness audit skill
-│   │   ├── SKILL.md
-│   │   └── references/
-│   ├── entity-identity-audit/         # Entity & identity audit skill
-│   │   ├── SKILL.md
-│   │   └── references/
-│   └── engagement-audit/              # On-site AI engagement skill
-│       ├── SKILL.md
-│       └── references/
-│
-├── tests/                             # Evaluation schemas and mock test data
-│   ├── test-sites.json                # Test target site registry
-│   ├── expected-findings.json         # Benchmark audit results schema
-│   └── evaluation.md                  # Verification and benchmark plan
-│
-├── src/                               # Source code modules (scaffolding)
-│   ├── crawler/                       # Web crawling and rendering engines
-│   ├── extraction/                    # DOM, JSON-LD, and text extractor modules
-│   ├── analysis/                      # Deterministic and LLM evaluation engines
-│   └── reporting/                     # Report generation and export utilities
-│
-└── config/                            # Runtime configuration
-    └── audit-config.yaml              # Audit thresholds and feature flags
+|-- marketplace.json
+|-- skills/
+|   |-- audit-orchestrator/SKILL.md     # entrypoint: true
+|   |-- crawl-render-audit/
+|   |-- structured-data-audit/
+|   |-- fact-quality-audit/
+|   |-- freshness-corroboration/
+|   |-- entity-identity-audit/
+|   `-- engagement-audit/
+|-- docs/
+|-- tests/
+|-- src/            # implementation (not yet)
+`-- config/
 ```
 
----
+## Authors
 
-## 🚀 Development Roadmap
+Shivam ([shivam99392677](https://github.com/shivam99392677)), Ankit Kumar ([Ankit-07-chy](https://github.com/Ankit-07-chy))
 
-- [x] **Phase 1: Project Scaffolding & Marketplace Manifest** (Current)
-- [ ] **Phase 2: Day-1 Research & Audit Matrix Refinement**
-- [ ] **Phase 3: Crawler Engine & Evidence Store Implementation**
-- [ ] **Phase 4: Specialized Skill Logic & Deterministic Checkers**
-- [ ] **Phase 5: Benchmark Evaluation & Report Generator**
+## License
 
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
+MIT. See [LICENSE](LICENSE).
