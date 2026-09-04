@@ -1,31 +1,31 @@
 ---
-name: Crawl & Render Audit
-description: Evaluates robots.txt rules, HTTP headers, SSR vs CSR rendering parity, and AI crawler accessibility.
+name: crawl-render-audit
+description: >-
+  Check whether AI crawlers can reach and read a site: robots.txt, HTTP
+  status/redirects, noindex, optional HTML vs rendered DOM gap.
+license: MIT
 ---
 
-# Crawl & Render Audit Skill
+# crawl-render-audit
 
-## Purpose
-Audits the technical accessibility of target web pages for AI user-agent crawlers (`GPTBot`, `ClaudeBot`, `PerplexityBot`, etc.), identifying blocks, rendering delays, and indexability hurdles.
+Reach / Read specialist. Invoked by `audit-orchestrator`.
 
-## When to Use
-Invoked by `audit-orchestrator` during the initial discovery stage of a brand audit.
+## When to use
 
-## High-Level Responsibilities
-- Parse `robots.txt` rules against standard AI User-Agent strings.
-- Inspect HTTP headers (`X-Robots-Tag`, `Content-Type`, `Cache-Control`).
-- Compare Pre-JavaScript HTML with Post-JavaScript rendered DOM to identify content invisible to non-JS crawlers.
-- Check XML sitemap accessibility and index completeness.
+When a snapshot exists and crawl/render accessibility must be scored as findings.
 
 ## Inputs
-- `target_urls` (array of strings)
-- `user_agents` (array of AI crawler user-agent strings)
 
-## Outputs
-- Crawl accessibility score (0–100)
-- Array of crawl block findings with HTTP status and directive evidence
+- `snapshot`: pages with URL, status chain, headers, raw HTML, optional rendered DOM
 
-## Evidence Expectations
-- Raw `robots.txt` file content
-- HTTP response header dumps
-- Raw vs rendered HTML DOM snapshots
+## Procedure
+
+1. Parse `robots.txt`. For GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and `*`, record Allow/Disallow on `/` and key content paths (CR-01).
+2. For each fetched URL, record status chain. Flag non-200, loops, http-to-https traps, soft-404 (CR-02).
+3. If rendered DOM is present, diff visible text and JSON-LD against raw HTML. Flag facts/prices that exist only after JS (CR-03). If no DOM, skip CR-03; do not fail the skill.
+4. Flag `X-Robots-Tag` / meta robots `noindex` on pages that otherwise look indexable (CR-04).
+5. Emit findings with URL, quoted robots/header/HTML evidence, severity, and a suggested action.
+
+## Output
+
+Array of findings (`id`, `title`, `severity`, `evidence`, `suggested_action`). Orchestrator assigns final `F-00N` ids.
