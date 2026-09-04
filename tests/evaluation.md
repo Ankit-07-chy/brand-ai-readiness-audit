@@ -1,39 +1,21 @@
-# Audit Evaluation & Verification Plan
+# Evaluation plan
 
-This document outlines the testing methodology, ground truth benchmarks, and evaluation metrics used to validate the accuracy of the Brand AI Readiness Audit package.
+Judges score detection accuracy, suggested-action quality, generalization, and agentskills.io / marketplace.json hygiene - not a GUI.
 
----
+## Must pass
 
-## 1. Evaluation Goals
+1. `marketplace.json` has exactly one `"entrypoint": true`. Skill `path` is a **folder**.
+2. Every `SKILL.md` `name` equals its folder (lowercase hyphens).
+3. Entrypoint JSON validates against Adobe floor: `site`, `audited_at`, `summary`, `findings[]` with `suggested_action` object.
+4. No finding whose only claim is "missing llms.txt" or "missing schema" on a non-product page.
+5. Engagement findings are about who/what/next, nav, breadcrumbs, CTAs - not APIs.
+6. Same snapshot in -> same findings out (deterministic checks).
+7. ZIP <= 45 MB. Runtime under 5 minutes on a typical public site.
 
-1. **Deterministic Accuracy:** Ensure 100% precision on rule-based checks (`robots.txt` parsing, JSON-LD syntax validation, header inspection).
-2. **LLM Evidence Grounding:** Verify that 100% of LLM reasoning findings map back to valid raw evidence IDs.
-3. **Reproducibility:** Guarantee identical scoring outputs when evaluating static DOM/header snapshot sets.
-4. **False-Positive Minimization:** Benchmark hallucination flags and schema error flags against human expert audit baselines.
+## Calibration sites
 
----
+See `test-sites.json`. Run after Python scripts exist. Do not hard-code those hostnames into skill logic.
 
-## 2. Benchmark Dataset (`test-sites.json`)
+## Precision
 
-The test suite evaluates a curated list of diverse website architectures:
-- **Client-Side Rendered (CSR):** React/Vue web applications relying on dynamic hydration.
-- **Server-Side Rendered (SSR):** Static and traditional CMS sites with immediate HTML payloads.
-- **E-Commerce Portals:** High-density product pages with complex JSON-LD markup.
-- **Enterprise SaaS:** Documentation-heavy sites with developer endpoints and security policies.
-
----
-
-## 3. Verification Metrics
-
-- **Precision & Recall on Skill Flags:** $\text{Precision} = \frac{\text{True Positive Findings}}{\text{Total Flagged Findings}}$
-- **Evidence Traceability Index:** Percentage of generated finding cards that contain valid, extractable evidence citations.
-- **Schema Validation Match Rate:** Agreement percentage between internal Schema checkers and official Schema.org API results.
-
----
-
-## 4. Execution Workflow
-
-```bash
-# Example test execution command (scaffolding placeholder)
-pytest tests/
-```
+False positives (especially missing-schema and llms.txt) hurt more than a missed nice-to-have. Prefer fewer, evidenced findings.
