@@ -1,30 +1,31 @@
 ---
-name: Freshness & Corroboration
-description: Checks timestamp metadata, update cadence, external citation consistency, and cross-source corroboration.
+name: freshness-corroboration
+description: >-
+  Check date signals for disagreement or staleness, then corroborate 2-3
+  public sources. No paid APIs.
+license: MIT
 ---
 
-# Freshness & Corroboration Skill
+# freshness-corroboration
 
-## Purpose
-Assesses content freshness indicators and external corroboration signals to ensure AI models recognize brand information as up-to-date and authoritatively supported.
+Trust specialist. Invoked by `audit-orchestrator`.
 
-## When to Use
-Invoked by `audit-orchestrator` during recency and authority evaluation.
+## When to use
 
-## High-Level Responsibilities
-- Inspect explicit timestamp metadata (`dateModified`, `datePublished`, HTTP `Last-Modified`, sitemap `<lastmod>`).
-- Evaluate update cadence across core product pages, blogs, and documentation.
-- Verify cross-source corroboration by checking external citations and references.
+When a snapshot exists and freshness / corroboration must be checked.
 
 ## Inputs
-- `page_metadata_records` (array of header and schema timestamps)
-- `external_reference_links` (array of outbound/inbound citation URLs)
 
-## Outputs
-- Freshness & Corroboration score (0–100)
-- Recency decay report and un-corroborated claim flags
+- `snapshot`: HTML, headers, JSON-LD dates
+- optional public lookups: Wikidata, Wikipedia, `sameAs` targets
 
-## Evidence Expectations
-- Header timestamp dumps
-- JSON-LD date field extracts
-- Citation link mappings
+## Procedure
+
+1. Collect dateModified, datePublished, HTTP Last-Modified, sitemap lastmod, visible dates. Flag disagreements (FC-01).
+2. Flag core pages whose newest date is older than 12 months with no update signal (FC-02). Do not treat a footer copyright year as an update.
+3. For brand name, key dates, and key facts, check 2-3 public sources (Wikidata, Wikipedia, official social). Flag mismatches (FC-03).
+4. Emit findings with the date values or source URLs, severity, suggested action.
+
+## Output
+
+Array of findings (`id`, `title`, `severity`, `evidence`, `suggested_action`).
