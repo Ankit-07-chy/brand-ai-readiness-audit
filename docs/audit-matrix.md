@@ -1,107 +1,69 @@
-# Brand AI Readiness Audit Matrix
+# Audit matrix
 
-This matrix defines the audit categories, evaluation signals, required evidence, severity classification, scoring methodologies, and false-positive considerations.
+Concrete checks. Each finding must name a URL, quote evidence, and give a suggested action.
 
----
+Golden rules:
+- **Never** report "missing schema" blindly. Only flag schema that is present-and-broken, or Product/Offer that is incomplete **on pages that are already product pages**.
+- **Never** treat missing `/llms.txt`, OpenAPI, or a chat widget as a core engagement defect.
+- Engagement is **visitor orientation**, not agent-protocol discovery.
 
-## 1. Crawl & Render Accessibility
+Severity = impact x scope x confidence. Values: `critical` | `high` | `medium` | `low`.
 
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | Crawl & Render Accessibility |
-| **Signal** | AI Bot Disallow Rules (`robots.txt`), HTTP Header restrictions (`X-Robots-Tag`), Client-Side Rendering (CSR) blocking, Sitemap accessibility. |
-| **Evidence** | `robots.txt` parse logs, HTTP response headers, DOM diff (Pre-JS vs Post-JS rendered HTML), Sitemap XML HTTP status. |
-| **Severity** | **Critical** (if AI bots completely blocked) to **Medium** (if JS rendering delays data extraction). |
-| **Scoring** | *Placeholder* (e.g., 0–100 sub-score based on percentage of unblocked core pages and SSR availability). |
-| **False-Positive Considerations** | Intentional staging/testing disallows, geo-fencing, anti-scraping rate limits misidentified as bot blocks. |
+## Off-site discoverability
 
----
+### crawl-render-audit (Reach / Read)
 
-## 2. Structured Data & Semantic Markup
+| ID | Check | Evidence | Typical severity |
+| :--- | :--- | :--- | :--- |
+| CR-01 | robots.txt Disallow for GPTBot / ClaudeBot / PerplexityBot / Google-Extended / * | raw robots.txt + matching UA | critical if core paths blocked |
+| CR-02 | Non-200, redirect loops, http to https traps, soft-404 | status chain, final URL | high |
+| CR-03 | HTML vs rendered DOM gap (optional Playwright) | text/JSON-LD present in DOM, absent in raw HTML | high if facts/prices only in JS |
+| CR-04 | noindex / X-Robots-Tag / meta robots on indexable pages | header or meta | high |
 
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | Structured Data & Semantic Markup |
-| **Signal** | Schema.org JSON-LD presence, Microdata syntax validity, OpenGraph completeness, semantic HTML tags (`<article>`, `<header>`, `<table>`). |
-| **Evidence** | Extracted JSON-LD payloads, Schema validator syntax error logs, DOM element tree analysis. |
-| **Severity** | **High** (missing Organization / Product schemas) to **Low** (missing optional schema fields). |
-| **Scoring** | *Placeholder* (e.g., Weighted score based on essential schema presence and validation errors). |
-| **False-Positive Considerations** | Duplicate schemas across head/body, valid custom extensions not recognized by generic validators. |
+### structured-data-audit (Extract)
 
----
+| ID | Check | Evidence | Typical severity |
+| :--- | :--- | :--- | :--- |
+| SD-01 | JSON-LD parses | parse error + snippet | high |
+| SD-02 | Product/Offer on product pages: name, price, currency, availability | field presence table | high if product page, offer incomplete |
+| SD-03 | Organization / WebSite markup conflicts with visible name | JSON-LD vs visible text | medium |
 
-## 3. Factual & Content Quality
+Do **not** fire "no FAQPage" / "no schema at all" as a defect. Proactive "add Product JSON-LD" is allowed as a suggested action when the page is clearly a product page.
 
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | Factual & Content Quality |
-| **Signal** | Claim clarity, statistical precision, un-ambiguous phrasing, absence of conflicting assertions, hallucination-vulnerable text blocks. |
-| **Evidence** | Extracted text propositions, ambiguity flags, contradictory statement pairs, readability indices. |
-| **Severity** | **High** (conflicting pricing or core product specs) to **Medium** (vague marketing jargon). |
-| **Scoring** | *Placeholder* (e.g., Percentage of verified non-ambiguous claims across sampled landing pages). |
-| **False-Positive Considerations** | Context-dependent terminology, figurative marketing language, regional product variance. |
+### fact-quality-audit (Extract)
 
----
+| ID | Check | Evidence | Typical severity |
+| :--- | :--- | :--- | :--- |
+| FQ-01 | Extract numeric/policy claims | claim + CSS path / snippet | n/a (input to others) |
+| FQ-02 | Contradictions across pages (price, hours, policy) | two snippets + URLs | high |
+| FQ-03 | Numbers without units or comparators | snippet | medium |
+| FQ-04 | Ungrounded superlatives ("#1", "best") | snippet | medium |
 
-## 4. Content Freshness
+### freshness-corroboration (Trust)
 
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | Content Freshness |
-| **Signal** | Explicit `dateModified` / `datePublished` metadata, sitemap `<lastmod>` tags, HTTP `Last-Modified` headers, visible date stamps. |
-| **Evidence** | HTTP response headers, JSON-LD date properties, DOM timestamp selectors, sitemap entry timestamps. |
-| **Severity** | **Medium** (stale content over 12 months old) to **Low** (missing last modified header on static pages). |
-| **Scoring** | *Placeholder* (e.g., Decay function applied to page age relative to industry update norms). |
-| **False-Positive Considerations** | Dynamic copyright year updates in footers misidentified as content revisions, evergreen content marked stale. |
+| ID | Check | Evidence | Typical severity |
+| :--- | :--- | :--- | :--- |
+| FC-01 | dateModified / datePublished / Last-Modified / visible dates disagree | the four values | medium |
+| FC-02 | Core page dates > 12 months with no update signal | dates + URL | medium |
+| FC-03 | Corroborate 2-3 public sources (Wikidata, Wikipedia, official social, news) | source URLs + mismatch | high if identity/price/date conflict |
 
----
+### entity-identity-audit (Use)
 
-## 5. External Corroboration
+| ID | Check | Evidence | Typical severity |
+| :--- | :--- | :--- | :--- |
+| EI-01 | Organization / brand name vs title / H1 / JSON-LD | three strings | high if conflict |
+| EI-02 | sameAs targets 404 or point at a different entity | URL + status + title | high |
+| EI-03 | NAP (name, address, phone) differs across pages | NAP tuples + URLs | high |
 
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | External Corroboration |
-| **Signal** | Citation by third-party authoritative sources, Wikipedia/Wikidata entity links, cross-domain brand mentions, press release alignment. |
-| **Evidence** | External link graph data, search engine index snippets, Wikipedia backlink records, cross-site reference matches. |
-| **Severity** | **High** (un-corroborated major brand claims) to **Medium** (missing third-party citations for sub-products). |
-| **Scoring** | *Placeholder* (e.g., Ratio of corroborated core brand assertions to total assertions). |
-| **False-Positive Considerations** | Sub-brands or newly launched products with minimal external index history, proprietary trade names. |
+## On-site engagement (not llms.txt)
 
----
+A visitor arrives, often on a **deep URL** from an AI answer. Can they tell who this is, what they can do, and what to do next without hunting?
 
-## 6. Entity Identity & Consistency
+| ID | Check | Evidence | Typical severity |
+| :--- | :--- | :--- | :--- |
+| EG-01 | First impression: who / what / next in first screenful | H1, subhead, primary CTA text | high if any of three missing |
+| EG-02 | Nav covers the jobs the site claims to do | nav labels vs claimed offerings | medium |
+| EG-03 | Deep page has breadcrumbs or equivalent parent context | breadcrumb DOM or none | high on interior pages |
+| EG-04 | Actionability: working primary CTA, not only "learn more" loops | CTA href + destination type | high if no action |
 
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | Entity Identity & Consistency |
-| **Signal** | Brand Name, Address, Phone (NAP) uniformity, canonical Organization schema `sameAs` links, Knowledge Graph ID consistency. |
-| **Evidence** | `sameAs` URL arrays, Wikidata entity IDs, cross-page NAP text matches, logo asset URL consistency. |
-| **Severity** | **High** (conflicting legal entity names or missing canonical links) to **Medium** (minor address format differences). |
-| **Scoring** | *Placeholder* (e.g., Consistency ratio across canonical site pages and social profiles). |
-| **False-Positive Considerations** | Parent company vs subsidiary name usage, recent brand renames in transition phase. |
-
----
-
-## 7. AI Discoverability & GEO Readiness
-
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | AI Discoverability & GEO Readiness |
-| **Signal** | Direct answerability for high-intent queries, structured FAQ presence, tabular spec data, AI crawler indexability. |
-| **Evidence** | Q&A DOM blocks, HTML table structures, text snippet conciseness ratings, LLM extraction success rate. |
-| **Severity** | **High** (product specs locked in images or un-parsable PDFs) to **Low** (sub-optimal heading hierarchy). |
-| **Scoring** | *Placeholder* (e.g., GEO composite score evaluating answer density and direct extraction ease). |
-| **False-Positive Considerations** | Highly visual products requiring graphical presentation, gated whitepapers. |
-
----
-
-## 8. On-Site AI Engagement Readiness
-
-| Attribute | Definition / Specification |
-| :--- | :--- |
-| **Category** | On-Site AI Engagement Readiness |
-| **Signal** | OpenAPI / REST spec availability, `llms.txt` presence, conversational search endpoints, structured action manifests. |
-| **Evidence** | `/llms.txt` HTTP GET response, `/openapi.json` presence, search API response formats, chat widget protocols. |
-| **Severity** | **Medium** (missing `llms.txt` or structured developer endpoints) to **Low** (non-standard search query params). |
-| **Scoring** | *Placeholder* (e.g., Binary/Tiered capability score for machine-agent interaction standards). |
-| **False-Positive Considerations** | Security-restricted internal APIs, non-public enterprise portals. |
+Out of scope as **core** findings: `/llms.txt`, OpenAPI, chatbot widgets, MCP manifests. Those may appear only as low-priority **proactive** suggestions.
