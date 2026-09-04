@@ -1,30 +1,31 @@
 ---
-name: Fact Quality Audit
-description: Evaluates factual precision, claim verifiability, content clarity, and hallucination vulnerability across brand assets.
+name: fact-quality-audit
+description: >-
+  Extract claims from the snapshot. Flag contradictions, numbers without
+  units, and ungrounded superlatives that make AI answers unsafe.
+license: MIT
 ---
 
-# Fact Quality Audit Skill
+# fact-quality-audit
 
-## Purpose
-Evaluates textual content across key brand pages to measure claim precision, semantic clarity, and vulnerability to AI hallucination or misinterpretation during retrieval-augmented generation (RAG).
+Extract specialist. Invoked by `audit-orchestrator`.
 
-## When to Use
-Invoked by `audit-orchestrator` during the semantic quality analysis phase.
+## When to use
 
-## High-Level Responsibilities
-- Extract core factual propositions, numerical claims, pricing details, and policy assertions.
-- Flag ambiguous phrasing, marketing hyperbole lacking supporting data, or contradictory statements.
-- Evaluate clarity of technical specifications and feature descriptions.
-- Highlight content blocks prone to LLM hallucination during RAG extraction.
+When a snapshot exists and claim quality must be checked.
 
 ## Inputs
-- `extracted_text_blocks` (array of text nodes mapped to DOM elements)
-- `brand_domain_context` (string description of core brand offerings)
 
-## Outputs
-- Fact quality sub-score (0–100)
-- Ambiguity and contradiction flag report with text snippet line numbers
+- `snapshot`: visible text per URL
 
-## Evidence Expectations
-- Extracted raw text blocks with source URL and DOM selector paths
-- Proposition extraction tables
+## Procedure
+
+1. Extract numeric, price, policy, and spec claims with their URL and snippet (FQ-01).
+2. Pair claims of the same type across pages. Flag contradictions (price, hours, refund, spec) (FQ-02).
+3. Flag numbers missing units or comparators (FQ-03).
+4. Flag ungrounded superlatives ("#1", "best", "only") with no adjacent proof (FQ-04).
+5. Emit findings with both snippets when contradicting, severity, suggested action (rewrite, add unit, cite source).
+
+## Output
+
+Array of findings (`id`, `title`, `severity`, `evidence`, `suggested_action`).
