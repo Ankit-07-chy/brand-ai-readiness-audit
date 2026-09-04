@@ -1,26 +1,29 @@
-# Brand AI Readiness Audit Default Configuration
+# Runtime defaults. Contest output is findings[], not a 0-100 index.
 
-version: "0.1.0"
+version: "1.0.0"
 
 crawler:
-  user_agents:
-    - "GPTBot"
-    - "ClaudeBot"
-    - "PerplexityBot"
-    - "Google-Extended"
-    - "Bytespider"
-  timeout_seconds: 30
-  max_depth: 3
-  render_js: true
+  timeout_seconds: 20
+  max_pages: 12
+  max_depth: 2
+  delay_ms: 400
+  respect_robots: true
+  # Default path: stdlib HTTP. Playwright only if already on the host.
+  # Never ship Chromium in the submission ZIP (Adobe cap 50 MB).
+  render_js: false
+  user_agent: "BrandAIReadinessAudit/1.0 (+https://github.com/shivam99392677/brand-ai-readiness-audit)"
 
-scoring_weights:
-  crawl_render_accessibility: 0.20
-  structured_data: 0.20
-  fact_quality: 0.20
-  freshness_corroboration: 0.15
-  entity_identity: 0.15
-  engagement_readiness: 0.10
+severity:
+  values: [critical, high, medium, low]
+  formula: impact_x_scope_x_confidence
 
-thresholds:
-  critical_severity_cap: 40
-  stale_content_months: 12
+guardrails:
+  recommend_only: true
+  max_runtime_seconds: 300
+  zip_budget_mb: 45
+
+# Missing schema is not automatically a finding.
+# Missing llms.txt / OpenAPI is never a core engagement finding.
+rules:
+  missing_schema_is_not_a_defect: true
+  llms_txt_is_not_core: true
