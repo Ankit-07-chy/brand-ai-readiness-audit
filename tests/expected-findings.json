@@ -1,22 +1,43 @@
 {
-  "description": "Shape of expected output. Not numeric scores. Not MISSING_LLMS_TXT. Replace with real snapshots after first live runs.",
-  "report_required_keys": ["site", "audited_at", "summary", "findings"],
-  "finding_required_keys": ["id", "title", "severity", "evidence", "suggested_action"],
-  "suggested_action_required_keys": ["summary", "priority"],
-  "severity_enum": ["critical", "high", "medium", "low"],
-  "forbidden_finding_ids": [
-    "MISSING_LLMS_TXT",
-    "MISSING_OPENAPI",
-    "MISSING_SCHEMA_GENERIC"
-  ],
-  "sample_finding": {
-    "id": "F-001",
-    "title": "No JSON-LD structured data on product pages",
-    "severity": "high",
-    "evidence": "Crawled 12 product pages; 0/12 contain schema.org markup.",
-    "suggested_action": {
-      "summary": "Add Product/Offer JSON-LD to every product page.",
-      "priority": "high"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Expected Audit Findings Benchmark Schema",
+  "description": "Ground truth evaluation benchmark schema for automated scoring and finding verification across both audit dimensions.",
+  "benchmarks": [
+    {
+      "site_id": "example-brand-001",
+      "expected_scores": {
+        "overall_score": 70,
+        "off_site_discoverability": {
+          "total": 68,
+          "sub_scores": {
+            "on_page_seo": 75,
+            "technical_seo_crawlability": 85,
+            "off_page_authority": "unavailable",
+            "ai_geo_discoverability": 60,
+            "machine_readability_entity": 40,
+            "freshness_corroboration": 80
+          }
+        },
+        "on_site_engagement": {
+          "total": 72,
+          "sub_scores": {
+            "first_visit_clarity": 80,
+            "content_scannability": 75,
+            "navigation_findability": 85,
+            "cta_user_journey": 70,
+            "performance_stability": 65,
+            "mobile_ux": 80,
+            "trust_credibility": 70,
+            "observable_accessibility": 75,
+            "ai_agent_readiness": 45
+          }
+        }
+      },
+      "expected_finding_codes": [
+        "FIND-SCHEMA-PRODUCT-MISSING",
+        "FIND-AGENT-LLMSTXT-MISSING",
+        "FIND-CRAWL-BOT-ALLOWED"
+      ]
     }
-  }
+  ]
 }

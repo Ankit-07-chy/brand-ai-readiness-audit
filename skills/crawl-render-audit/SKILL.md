@@ -1,31 +1,85 @@
 ---
-name: crawl-render-audit
-description: >-
-  Check whether AI crawlers can reach and read a site: robots.txt, HTTP
-  status/redirects, noindex, optional HTML vs rendered DOM gap.
-license: MIT
+name: Crawl & Render Audit
+description: Evaluates technical SEO, robots.txt AI bot permissions, HTTP headers, pre-JS vs post-JS rendering parity (DOM delta), XML sitemaps, canonicals, and observable performance.
 ---
 
-# crawl-render-audit
+# Crawl & Render Audit Skill
 
-Reach / Read specialist. Invoked by `audit-orchestrator`.
+## Purpose
+The **Crawl & Render Audit** skill evaluates the fundamental technical infrastructure and machine accessibility of a target website. It verifies whether traditional search bots and modern AI crawlers (`GPTBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended`, `Amazonbot`, `Bytespider`) can fetch, render, and index website assets without technical blockages, client-side rendering failures, or redirect loops.
 
-## When to use
+---
 
-When a snapshot exists and crawl/render accessibility must be scored as findings.
+## When to Use
+Invoked by `audit-orchestrator` during the initial discovery and technical evaluation phase of an audit.
+
+---
+
+## High-Level Responsibilities
+
+1. **AI User-Agent & `robots.txt` Directive Parsing**:
+   - Fetches and parses `robots.txt` against distinct AI crawler User-Agents:
+     - `GPTBot` (OpenAI training/retrieval)
+     - `OAI-SearchBot` (ChatGPT Search real-time)
+     - `ClaudeBot` (Anthropic)
+     - `PerplexityBot` (Perplexity AI)
+     - `Google-Extended` (Gemini training control)
+     - `Bytespider` (ByteDance)
+     - `Amazonbot` (Amazon Bedrock/Alexa)
+   - Flags blanket blocks (`Disallow: /`) and path-specific crawler restrictions.
+
+2. **HTTP Response & Security Header Inspection**:
+   - Evaluates HTTP response status codes (200 OK, 301 clean redirects, 404/410 handling).
+   - Detects redirect chains (>2 hops) and circular loops.
+   - Inspects `X-Robots-Tag` headers for accidental `noindex` / `nofollow` directives.
+   - Audits HTTPS enforcement, SSL certificate validity, and `Strict-Transport-Security` (HSTS).
+
+3. **Client-Side Rendering (CSR) vs. Server-Side Rendering (SSR) Parity**:
+   - Calculates the **DOM Delta** between raw pre-JavaScript HTML and fully rendered post-JavaScript DOM.
+   - Detects if critical product copy, pricing, FAQs, or navigational links are missing in raw HTML (invisible to lightweight AI fetchers).
+
+4. **XML Sitemap & Canonical Tag Verification**:
+   - Verifies `sitemap.xml` availability, schema compliance, and status codes of declared URLs.
+   - Validates `<link rel="canonical">` implementation to prevent duplicate indexing.
+
+5. **Observable Performance & Core Web Vitals**:
+   - Measures TTFB (Time to First Byte), LCP (Largest Contentful Paint), CLS (Cumulative Layout Shift), and Total Blocking Time (TBT).
+   - Flags heavy JavaScript bundles or unoptimized media assets.
+
+---
 
 ## Inputs
+- **`target_urls`** *(array of strings, required)*: URLs to crawl and analyze.
+- **`user_agents`** *(array of strings, optional)*: Specific AI bot User-Agent strings to test against `robots.txt`.
 
-- `snapshot`: pages with URL, status chain, headers, raw HTML, optional rendered DOM
+---
 
-## Procedure
+## Outputs
+- **`technical_score`** *(number, 0–100)*: Normalized Technical SEO & Crawlability score.
+- **`findings`** *(array of objects)*:
+  - `finding_id`: Unique identifier (e.g., `FIND-CRAWL-001`).
+  - `category`: Sub-pillar name.
+  - `severity`: `Critical` | `High` | `Medium` | `Low`.
+  - `title`: Short descriptive title.
+  - `description`: Detailed technical observation.
+  - `impact`: Explanation of how this impacts search indexation or AI discovery.
+  - `evidence_ids`: Array of referenced Evidence Store keys (`EVID-ROBOTS-TXT`, etc.).
+  - `remediation`: Specific, actionable technical fix.
+- **`dom_delta_report`**: Token count and content parity metrics across raw vs rendered DOM.
 
-1. Parse `robots.txt`. For GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and `*`, record Allow/Disallow on `/` and key content paths (CR-01).
-2. For each fetched URL, record status chain. Flag non-200, loops, http-to-https traps, soft-404 (CR-02).
-3. If rendered DOM is present, diff visible text and JSON-LD against raw HTML. Flag facts/prices that exist only after JS (CR-03). If no DOM, skip CR-03; do not fail the skill.
-4. Flag `X-Robots-Tag` / meta robots `noindex` on pages that otherwise look indexable (CR-04).
-5. Emit findings with URL, quoted robots/header/HTML evidence, severity, and a suggested action.
+---
 
-## Output
+## Evidence Expectations
+- `EVID-ROBOTS-TXT`: Raw `robots.txt` content and parsed AST per User-Agent.
+- `EVID-HTTP-HEADERS`: HTTP status codes, redirect traces, and response headers.
+- `EVID-DOM-RAW`: Un-hydrated raw HTML payload.
+- `EVID-DOM-RENDERED`: Fully hydrated post-JS DOM snapshot.
+- `EVID-SITEMAP-XML`: Sitemap fetch responses and URL status logs.
+- `EVID-PERF-METRICS`: Observable browser timing metrics (LCP, CLS, TTFB, TBT).
 
-Array of findings (`id`, `title`, `severity`, `evidence`, `suggested_action`). Orchestrator assigns final `F-00N` ids.
+---
+
+## False-Positive Considerations
+- **Staging / Preview Environments**: `Disallow: /` on staging subdomains is intentional and should not be penalized if auditing a live production domain.
+- **Anti-DDoS / Rate Limiting**: Cloudflare or firewall challenge pages encountered during automated crawling should be flagged as access limitations rather than site-wide `robots.txt` blocks.
+- **Selective Training Bot Restrictions**: A brand may intentionally disallow training bots (e.g., `Bytespider`) while permitting search bots (`PerplexityBot`). This should be reported as an intentional choice with Medium/Informational severity rather than a Critical failure.

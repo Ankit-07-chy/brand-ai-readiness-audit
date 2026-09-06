@@ -1,29 +1,49 @@
-# Runtime defaults. Contest output is findings[], not a 0-100 index.
+# Brand AI Readiness Audit Default Configuration
 
-version: "1.0.0"
+version: "0.2.0"
 
 crawler:
-  timeout_seconds: 20
-  max_pages: 12
-  max_depth: 2
-  delay_ms: 400
-  respect_robots: true
-  # Default path: stdlib HTTP. Playwright only if already on the host.
-  # Never ship Chromium in the submission ZIP (Adobe cap 50 MB).
-  render_js: false
-  user_agent: "BrandAIReadinessAudit/1.0 (+https://github.com/shivam99392677/brand-ai-readiness-audit)"
+  user_agents:
+    - "GPTBot"
+    - "OAI-SearchBot"
+    - "ClaudeBot"
+    - "PerplexityBot"
+    - "Google-Extended"
+    - "Bytespider"
+    - "Amazonbot"
+  timeout_seconds: 30
+  max_depth: 3
+  render_js: true
+  viewport:
+    desktop: { width: 1440, height: 900 }
+    mobile: { width: 390, height: 844 }
 
-severity:
-  values: [critical, high, medium, low]
-  formula: impact_x_scope_x_confidence
+dimensions:
+  off_site_discoverability:
+    weight: 0.50
+    sub_pillars:
+      on_page_seo: 0.18
+      technical_seo_crawlability: 0.20
+      off_page_authority: 0.12
+      ai_geo_discoverability: 0.25
+      machine_readability_entity: 0.15
+      freshness_corroboration: 0.10
 
-guardrails:
-  recommend_only: true
-  max_runtime_seconds: 300
-  zip_budget_mb: 45
+  on_site_engagement:
+    weight: 0.50
+    sub_pillars:
+      first_visit_clarity: 0.18
+      content_scannability: 0.12
+      navigation_findability: 0.14
+      cta_user_journey: 0.15
+      performance_stability: 0.12
+      mobile_ux: 0.10
+      trust_credibility: 0.08
+      observable_accessibility: 0.06
+      ai_agent_readiness: 0.05
 
-# Missing schema is not automatically a finding.
-# Missing llms.txt / OpenAPI is never a core engagement finding.
-rules:
-  missing_schema_is_not_a_defect: true
-  llms_txt_is_not_core: true
+thresholds:
+  critical_severity_penalty_cap: 40
+  stale_content_months: 18
+  min_touch_target_px: 48
+  min_wcag_contrast_ratio: 4.5
