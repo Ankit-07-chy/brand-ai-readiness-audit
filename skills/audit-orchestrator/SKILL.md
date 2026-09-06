@@ -1,37 +1,27 @@
 ---
 name: Audit Orchestrator
-description: Master entrypoint skill for orchestrating end-to-end brand AI readiness audits across crawlability, structured data, content quality, freshness, entity consistency, and AI engagement.
+description: Master entrypoint skill for orchestrating end-to-end brand AI readiness audits across specialized sub-skills.
 ---
 
 # Audit Orchestrator Skill
 
 ## Purpose
-The **Audit Orchestrator** is the sole marketplace entrypoint skill for the Brand AI Readiness Audit package. It coordinates the execution of specialized audit sub-skills, aggregates evidence, enforces validation rules, and synthesizes overall readiness scores and prioritized remediation reports.
+The **Audit Orchestrator** is the sole marketplace entrypoint skill for the Brand AI Readiness Audit package. It validates the target URL, coordinates the execution of registered audit sub-skills, aggregates evidence and findings, enforces error isolation, and synthesizes the overall readiness score.
 
 ## When to Use
-Use this skill when initiating a complete or modular AI readiness audit for a brand's web domain or set of target URLs.
+Invoked as the primary CLI or API entrypoint when initiating an AI readiness audit for a web URL.
 
-## High-Level Responsibilities
-1. **Pipeline Initialization:** Parse audit target configuration, resolve target URLs, and initialize the immutable Evidence Store.
-2. **Sub-Skill Dispatch:** Coordinate execution across the specialized audit skills:
-   - `crawl-render-audit`
-   - `structured-data-audit`
-   - `fact-quality-audit`
-   - `freshness-corroboration`
-   - `entity-identity-audit`
-   - `engagement-audit`
-3. **Evidence Aggregation & Validation:** Ensure all findings produced by sub-skills are grounded in deterministic evidence items.
-4. **Scoring & Synthesis:** Compute normalized composite scores (0–100) across categories and compile executive audit reports.
+## Execution Workflow
+1. **URL Validation:** Validates that the provided target URL contains a valid HTTP/HTTPS scheme and domain host.
+2. **Sub-Skill Delegation:** Dispatches audit execution to registered specialized sub-skills (`crawl-render-audit`, `structured-data-audit`).
+3. **Error Isolation:** Encapsulates skill-level exceptions, generating error findings for failed skills without crashing the orchestrator pipeline.
+4. **Aggregation & Scoring:** Aggregates findings from all executed sub-skills and computes a deterministic summary score.
+5. **Output Generation:** Returns a unified `AuditReport` JSON structure.
 
-## Inputs
-- **`target_url`** *(string, required)*: Primary brand domain or URL to audit.
-- **`config_path`** *(string, optional)*: Path to custom `audit-config.yaml`.
-- **`categories`** *(array of strings, optional)*: List of specific sub-skill IDs to execute (defaults to all).
+## Registered Sub-Skills (Day 3 Scope)
+- `crawl-render-audit`: Evaluates HTTP status, robots metadata directives, and pre-rendered DOM availability.
+- `structured-data-audit`: Audits JSON-LD presence, syntax validity, schema types, entity completeness, and visible content consistency.
 
-## Outputs
-- **`audit_report.json`**: Structured audit results, evidence mappings, category sub-scores, and overall AI readiness index.
-- **`executive_summary.md`**: Markdown summary containing key findings and prioritized remediation steps.
-
-## Evidence Expectations
-- Aggregates evidence manifests from all dispatched sub-skills.
-- Requires 100% trace mapping from generated findings to raw evidence IDs.
+## Code Entrypoint
+- Implementation module: [`src/orchestrator.py`](file:///d:/Adobe/brand-ai-readiness-audit/src/orchestrator.py)
+- Unit tests: [`tests/test_orchestrator.py`](file:///d:/Adobe/brand-ai-readiness-audit/tests/test_orchestrator.py)
