@@ -82,135 +82,44 @@ The system operates strictly on a **URL-only input constraint**: users provide o
 
 ## Architectural Component Separation
 
-To ensure deterministic reliability, eliminate model hallucinations, and guarantee explainable, auditable results, the architecture strictly segregates responsibilities across six core layers:
+To prevent model hallucination and ensure reproducible audits, the architecture strictly segregates responsibilities across clear decoupled layers:
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 1. Deterministic Extraction Layer (Headless Browser, Parsers, ASTs)     │
-├─────────────────────────────────────────────────────────────────────────┤
-│ 2. Immutable Evidence Store (Persisted Raw Data, DOMs, HTTP Headers)   │
-├─────────────────────────────────────────────────────────────────────────┤
-│ 3. Automated Context & Query Synthesis (Entity Inference & Query Gen)   │
-├─────────────────────────────────────────────────────────────────────────┤
-│ 4. Empirical AI Visibility & LLM Reasoning (Ground-Truth Auditing)     │
-├─────────────────────────────────────────────────────────────────────────┤
-│ 5. Evidence Validation & Scoring Engine (0–100 Normalized Calibration)  │
-├─────────────────────────────────────────────────────────────────────────┤
-│ 6. Remediation & Reporting Engine (Prioritized Action Plans)            │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### 1. Discovery & Site Crawler (`src/crawler/`)
+- **Responsibility:** Discover reachable pages, extract crawler rules, and fetch page HTML.
+- **Components:**
+  - `RobotsTxtParser` ([`src/crawler/robots.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/crawler/robots.py)): Parses user-agent specific rules (`*`, `GPTBot`, `ClaudeBot`, `PerplexityBot`) and sitemap locations.
+  - `SitemapParser` ([`src/crawler/sitemap.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/crawler/sitemap.py)): Extracts child sitemaps and target URLs from sitemap indices and urlsets.
+  - `PageRoleClassifier` ([`src/crawler/role_classifier.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/crawler/role_classifier.py)): Categorizes URLs into functional roles (`homepage`, `about`, `contact`, `product`, `terms`, `documentation`).
+  - `SiteCrawler` ([`src/crawler/engine.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/crawler/engine.py)): Executes depth-bounded crawl using custom or default HTTP fetchers.
 
----
+### 2. General Evidence Extraction (`src/extraction/`)
+- **Responsibility:** Extract sitewide and per-page DOM evidence without domain-specific audit assumptions.
+- **Extractors:**
+  - `extract_page_metadata` ([`src/extraction/metadata.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/extraction/metadata.py)): Extracts page titles, meta descriptions, canonical URLs, OG tags, and language declarations.
+  - `extract_page_content` ([`src/extraction/page.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/extraction/page.py)): Parses visible headings, paragraph blocks, lists, tables, blockquotes, dates, and contact signals.
+  - `extract_page_images` ([`src/extraction/images.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/extraction/images.py)): Filters tracking pixels and favicons while preserving figure captions and image dimensions.
+  - `extract_page_links_and_resources` ([`src/extraction/links.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/extraction/links.py)): Extracts internal/external links, downloadable document resources (PDF, CSV), and interactive forms.
+  - `extract_structured_data` ([`src/extraction/structured_data.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/extraction/structured_data.py)): Extracts JSON-LD scripts, OpenGraph, Microdata, and validates JSON-LD syntax.
 
-### Layer 1: Deterministic Extraction Layer
+### 3. Shared Evidence Store (`src/evidence/models.py`)
+- **Responsibility:** Persist immutable, structured evidence models for the entire audited domain.
+- **Key Models:**
+  - `WebsiteEvidence`: Container for all `PageEvidence`, `RobotsEvidence`, and `SitemapEvidence`.
+  - `PageEvidence`: Structured page snapshot containing metadata, headings, images, links, forms, documents, dates, and contacts.
+  - `Provenance`: Standardized tracking of evidence source URL and DOM location context.
 
-- **Responsibility:** Execute objective, non-probabilistic parsing, network fetching, and DOM rendering.
-- **Key Operations:**
-  - **Crawler & Render Pipeline:** Fetches raw server responses and executes full client-side JavaScript rendering using a headless browser (Playwright).
-  - **Robots & Header Parser:** Evaluates `robots.txt` directives per AI bot (`GPTBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended`, etc.) and parses HTTP headers (`X-Robots-Tag`, `Content-Security-Policy`, `Cache-Control`, `Last-Modified`).
-  - **Schema & Metadata Parser:** Extracts embedded JSON-LD scripts, Microdata, OpenGraph tags, Twitter cards, and semantic HTML element trees.
-  - **Pre- vs. Post-JS DOM Differ:** Computes differences between server-delivered HTML and hydrated client-side DOM to identify content invisible to non-JavaScript crawlers.
-  - **Protocol Checker:** Checks physical endpoint availability (`/sitemap.xml`, `/llms.txt`, `/llms-full.txt`, `/openapi.json`, `/.well-known/ai-plugin.json`).
-  - **Frontend Performance & Viewport Metrics:** Computes observable Core Web Vitals (LCP, CLS, TTFB, TBT), responsive viewport metrics, touch target dimensions, and WCAG contrast ratios.
+### 4. Semantic Understanding & Context Synthesis (`src/analysis/understanding.py`)
+- **Responsibility:** Automatically infer canonical entity profiles and provide an extensible interface (`SemanticUnderstandingAdapter`) for AI discovery query generation and factual reasoning.
+- **Operations:**
+  - Baseline `BaselineUnderstandingAdapter` provides deterministic fallbacks.
+  - Pluggable adapter interface accepts `WebsiteEvidence` and returns enriched semantic insights.
 
----
+### 5. Specialized Audit Skills (`src/analysis/`)
+- **Responsibility:** Perform domain audits on top of `WebsiteEvidence` across both Off-site Discoverability and On-site Engagement dimensions.
+- **Skills:**
+  - `crawl_render_audit` ([`src/analysis/crawl_render_audit.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/analysis/crawl_render_audit.py)): Evaluates site crawlability, HTTP status, meta tags, heading hierarchy, content depth, and site coverage.
+  - `structured_data_audit` ([`src/analysis/structured_data_audit.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/analysis/structured_data_audit.py)): Evaluates JSON-LD presence, parse validity, schema types, entity completeness, and visible content consistency.
+  - Additional sub-skills for fact quality, freshness, entity consistency, and on-site engagement.
 
-### Layer 2: Immutable Evidence Store
-
-- **Responsibility:** Capture and persist all raw audit artifacts with deterministic content addressing and unique Evidence IDs.
-- **Evidence Artifacts:**
-  - `EVID-DOM-RAW`: Un-rendered HTTP response HTML payload.
-  - `EVID-DOM-RENDERED`: Fully hydrated post-JavaScript DOM snapshot.
-  - `EVID-HTTP-HEADERS`: Raw HTTP request and response header dump.
-  - `EVID-ROBOTS-TXT`: Raw `robots.txt` text content and parsed directive AST.
-  - `EVID-SITEMAP-XML`: Sitemap XML content, status verification, and URL registry.
-  - `EVID-SCHEMA-JSONLD`: Extracted and normalized JSON-LD schema blocks.
-  - `EVID-TEXT-BLOCKS`: Cleaned text blocks mapped to source DOM selectors and line positions.
-  - `EVID-AI-VISIBILITY`: Empirical test records `{ query, ai_system, raw_response, citations, evidence_ids }`.
-  - `EVID-SCREENSHOTS`: Viewport renders (Desktop 1440px, Mobile 390px) for visual above-the-fold clarity analysis.
-- **Core Principle:** Evidence artifacts are **immutable**. LLM analysis and scoring modules are strictly forbidden from inspecting external live websites directly; all reasoning must be performed over the Evidence Store.
-
----
-
-### Layer 3: Automated Context Discovery & Entity Inference
-
-- **Responsibility:** Automatically construct the brand's canonical profile and domain understanding without requiring manual user input.
-- **Inference Pipeline:**
-  1. **Canonical Entity Derivation:** Aggregates brand name, legal entity, logos, social links (`sameAs`), and contact details from `Organization` schema, `<title>`, footer copy, and `/about` or `/contact` pages.
-  2. **Core Offerings & Positioning:** Extracts core value propositions, product/service categories, and target audience definitions from above-the-fold hero sections and navigation taxonomy.
-  3. **Discovery Query Generation:** Automatically generates two classes of queries for empirical AI visibility testing:
-     - *Branded Specific Queries*: e.g., "What does [Brand] do?", "What is [Brand]'s pricing model?", "What are the core features of [Brand]'s product?"
-     - *Broad Categorical Discovery Queries*: e.g., "What are the best [Industry Category] tools for [Target Audience]?"
-
----
-
-### Layer 4: Structural AI Readiness vs. Observed AI Visibility
-
-A critical architectural pillar of this system is the rigorous separation between **Structural AI Readiness** and **Observed AI Visibility**:
-
-```
-                               AI Readiness
-                                    │
-         ┌──────────────────────────┴──────────────────────────┐
-         ▼                                                     ▼
-1. Structural AI Readiness                           2. Observed AI Visibility
-(Can AI systems technically access & parse?)         (Does the brand actually appear & get cited?)
-─────────────────────────────────────────            ─────────────────────────────────────────
-• robots.txt AI bot permissions                      • Brand mention rate in AI responses
-• SSR vs CSR JavaScript accessibility                • Citation & source link attribution rate
-• Schema.org JSON-LD & entity markup                 • Prominence rank in multi-brand answers
-• /llms.txt standard compliance                      • Factual correctness of AI assertions
-• Heading & tabular data machine-readability         • Entity disambiguation vs namesake conflation
-```
-
-#### Empirical AI Visibility Evaluation Loop
-1. The system dispatches derived test queries to available AI/search discovery engines.
-2. The raw response, cited URLs, and ranking positions are captured as immutable evidence.
-3. The LLM Evaluator compares the generated response against ground-truth facts extracted from the brand's website.
-4. Metrics recorded:
-   - **Mention Rate**: Did the AI mention the brand? (Yes / No)
-   - **Citation Rate**: Did the AI cite the audited domain as a reference? (Yes / No)
-   - **Prominence**: Was the brand recommended first, listed neutrally, or omitted?
-   - **Factual Accuracy**: Did the AI state correct pricing, capabilities, and positioning?
-   - **Source Quality**: Were the citations authoritative or outdated third-party forums?
-
----
-
-### Layer 5: Inferred On-Site Engagement (No Fabricated Analytics)
-
-Because the audit operates strictly with URL-only input, private analytics (e.g., Google Analytics bounce rates, session durations, conversion funnels) cannot be observed.
-
-**Architectural Rule**: The system **never fabricates behavioral metrics**. Instead, On-site Engagement is inferred exclusively from observable technical, structural, visual, and informational attributes:
-- **First-Visit Clarity**: Evaluated from above-the-fold layout, value proposition clarity, and visual hierarchy.
-- **Content Engagement**: Evaluated from paragraph lengths, readability indices, and visual content aids.
-- **Navigation & Findability**: Evaluated from click depth to key pages, header/footer structure, and internal search parameters.
-- **CTA & User Journey**: Evaluated from button contrast, clear action labels, form field counts, and valid target links.
-- **Performance**: Evaluated from observable Core Web Vitals (LCP, CLS, TTFB, TBT).
-- **Mobile UX**: Evaluated from responsive viewport layout, touch target sizes, and horizontal overflow checks.
-- **Trust & Credibility**: Evaluated from presence of Privacy Policy, Terms, contact information, verifiable client logos, and certifications.
-- **Accessibility**: Evaluated from observable WCAG AA criteria (form labels, accessible names, contrast ratios, document lang).
-- **AI-Agent Readiness**: Evaluated from `/llms.txt`, discoverable OpenAPI specs, and predictable search query APIs.
-
----
-
-### Layer 6: Evidence Validation & Calibrated Scoring
-
-- **Evidence Validation Rules:**
-  1. Every generated finding must cite one or more valid Evidence IDs from the Evidence Store.
-  2. Any finding lacking verifiable evidence is stripped during validation.
-  3. **Missing Evidence Rule**: When a signal cannot be determined from public observation (e.g., private backlink graphs), it is marked as `Unknown / Unavailable` rather than `Failed`.
-- **Scoring Engine:**
-  - Computes sub-scores (0–100) across all 6 Off-site and 9 On-site sub-pillars using calibrated, weighted formulas.
-  - Critical blockers (e.g., total AI crawler block or invalid SSL) impose hard penalty caps on their respective categories.
-  - Scores are explicitly presented as **Audit-Derived Readiness Indexes**, never misattributed as proprietary search engine ranking scores.
-
----
-
-### Layer 7: Remediation & Output Artifacts
-
-- **Actionable Remediation Pipeline:**
-  Each finding is structured as:
-  $$\text{Finding} \longrightarrow \text{Evidence ID} \longrightarrow \text{Impact Assessment} \longrightarrow \text{Specific Remediation Code / Copy}$$
-- **Standardized Deliverables:**
-  - `audit_report.json`: Machine-readable JSON artifact conforming to the Agent Skill Marketplace schema.
-  - `executive_summary.md`: Human-readable executive markdown report with visual scoreboards, critical blockers, and prioritized recommendations.
+### 6. Scoring Engine & Master Orchestrator (`src/orchestrator.py`)
+- **Responsibility:** Coordinate end-to-end execution, aggregate audit findings across all skills into a unified `AuditReport`, and compute normalized 0–100 readiness scores with severity penalty caps.

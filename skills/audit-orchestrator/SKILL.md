@@ -6,7 +6,7 @@ description: Master orchestrator and sole entrypoint skill for coordinating end-
 # Audit Orchestrator Skill
 
 ## Purpose
-The **Audit Orchestrator** is the master entrypoint skill for the Brand AI Readiness Audit package. It receives **strictly a website URL** (`target_url`), derives all necessary brand context automatically, initializes the immutable Evidence Store, coordinates execution across specialized audit sub-skills, validates evidence grounding, and synthesizes normalized scores and actionable remediation reports.
+The **Audit Orchestrator** is the master entrypoint skill for the Brand AI Readiness Audit package. It validates the target URL, derives all necessary brand context automatically, initializes the immutable Evidence Store, coordinates execution across registered specialized audit sub-skills, validates evidence grounding, and synthesizes normalized scores and actionable remediation reports.
 
 ---
 
@@ -53,7 +53,6 @@ Dimension A: Off-site Discoverability                     Dimension B: On-site E
                                       ▼
                         4. Evidence Validation Engine
                                       │
-                                      ▼
                         5. Normalized Scoring & Penalty Caps
                                       │
                                       ▼
@@ -63,10 +62,10 @@ Dimension A: Off-site Discoverability                     Dimension B: On-site E
                         7. Final Audit Deliverables
 ```
 
-1. **Pipeline Initialization & Context Derivation**: Parse `target_url`, discover core brand pages, and construct internal brand context.
-2. **Crawl & Render Execution**: Trigger headless browser (Playwright) to capture raw HTML, hydrated post-JS DOM, HTTP headers, and Core Web Vitals.
-3. **Evidence Store Ingestion**: Store all raw payloads with unique deterministic Evidence IDs (`EVID-DOM-RAW`, `EVID-SCHEMA-JSONLD`, `EVID-AI-VISIBILITY`, etc.).
-4. **Sub-Skill Dispatch**: Coordinate parallel execution across specialized audit skills:
+1. **Pipeline Initialization & Context Derivation**: Validates that the provided target URL contains a valid HTTP/HTTPS scheme and domain host, discovers core brand pages, and constructs internal brand context.
+2. **Crawl & Render Execution**: Triggers `SiteCrawler` and `Playwright` to capture raw HTML, hydrated post-JS DOM, HTTP headers, and Core Web Vitals.
+3. **Evidence Store Ingestion**: Persists structured evidence (`WebsiteEvidence`, `PageEvidence`) with unique deterministic Evidence IDs (`EVID-DOM-RAW`, `EVID-SCHEMA-JSONLD`, etc.).
+4. **Sub-Skill Dispatch & Error Isolation**: Coordinates execution across registered specialized audit skills with robust exception encapsulation so individual sub-skill failures do not crash the pipeline:
    - `crawl-render-audit`: Technical SEO, AI crawler `robots.txt`, SSR vs CSR DOM delta, sitemaps.
    - `structured-data-audit`: Schema.org JSON-LD, Microdata, OpenGraph, semantic HTML.
    - `fact-quality-audit`: Proposition extraction, claim ambiguity, cross-page contradictions, hallucination vulnerability.
@@ -74,76 +73,31 @@ Dimension A: Off-site Discoverability                     Dimension B: On-site E
    - `entity-identity-audit`: Internally derived canonical entity model, cross-page NAP consistency, `sameAs` links.
    - `engagement-audit`: Comprehensive 9-pillar On-site Engagement evaluation.
 5. **Observed AI Visibility Testing**: Dispatches derived queries to AI search engines, recording query + raw response + citations + prominence + accuracy into the Evidence Store.
-6. **Evidence Validation**: Enforces that 100% of reported findings cite verifiable Evidence IDs. Strips ungrounded claims.
+6. **Evidence Validation**: Enforces that 100% of reported findings cite verifiable Evidence IDs.
 7. **Scoring & Synthesis**: Computes normalized 0–100 sub-scores and overall readiness index using calibrated weights.
-8. **Report Generation**: Emits `audit_report.json` and `executive_summary.md`.
+8. **Report Generation**: Emits unified `AuditReport` JSON structure and executive markdown report.
+
+---
+
+## Code Entrypoints
+- Implementation module: [`src/orchestrator.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/orchestrator.py)
+- Evidence models: [`src/evidence/models.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/src/evidence/models.py)
+- Unit tests: [`tests/test_orchestrator.py`](file:///c:/Users/ankit/Desktop/brand-ai-readiness-audit/tests/test_orchestrator.py)
 
 ---
 
 ## Inputs
 - **`target_url`** *(string, required)*: Primary brand domain or URL to audit (e.g., `https://example.com`).
-- **`config_path`** *(string, optional)*: Path to custom `audit-config.yaml` for adjusting crawl depth or feature flags.
+- **`config_path`** *(string, optional)*: Path to custom `audit-config.yaml`.
 
 ---
 
 ## Outputs
-
-### 1. `audit_report.json`
-Machine-readable audit artifact containing:
-- `target_url`: Audited domain.
-- `timestamp`: Audit execution timestamp.
-- `overall_score`: Composite Brand AI Readiness Score (0–100).
-- `off_site_discoverability`:
-  - `score`: Dimension A composite score (0–100).
-  - `sub_scores`: Breakdown across On-page SEO, Technical SEO, Authority, AI/GEO Discoverability, Machine Readability, Freshness.
-- `on_site_engagement`:
-  - `score`: Dimension B composite score (0–100).
-  - `sub_scores`: Breakdown across 9 observable engagement pillars.
-- `ai_visibility_tests`: Array of empirical test records `{ query, ai_system, raw_response, brand_mentioned, domain_cited, prominence_rank, factual_accuracy_score, evidence_ids }`.
-- `findings`: Array of categorized findings with severity (`Critical`, `High`, `Medium`, `Low`), impact, and evidence IDs.
-- `recommendations`: Prioritized, actionable remediation steps.
-
-### 2. `executive_summary.md`
-Markdown report formatted with executive scoreboards, key findings, and prioritized developer/content remediation checklists.
+- **`audit_report.json`**: Structured audit results, evidence mappings, category sub-scores, and overall AI readiness index.
+- **`executive_summary.md`**: Markdown summary containing key findings and prioritized remediation steps.
 
 ---
 
 ## Scoring Model & Hierarchy
 
 $$\text{Overall Score} = (0.50 \times \text{Off-site Discoverability}) + (0.50 \times \text{On-site Engagement})$$
-
-```
-Brand AI Readiness Audit
-─────────────────────────
-Target: example.com
-Overall Score: 78/100
-
-Off-site Discoverability: 72/100
-On-site Engagement:       84/100
-
-OFF-SITE DISCOVERABILITY (72/100)
-├── On-page SEO & Content Quality:  81
-├── Technical SEO & Crawlability:   76
-├── Off-page Authority:             61 (Observable only)
-├── AI / GEO Discoverability:       69 (Structural: 78, Observed: 60)
-├── Machine Readability & Entity:   82
-└── Freshness & Corroboration:      73
-
-ON-SITE ENGAGEMENT (84/100)
-├── First-Visit Clarity:            91
-├── Content Scannability:           86
-├── Navigation & Findability:       88
-├── CTA & User Journey:             79
-├── Performance & Stability:        75
-├── Mobile UX & Responsiveness:     90
-├── Trust & Credibility:            83
-├── Observable Accessibility:       81
-└── AI-Agent Interaction Readiness: 62
-```
-
----
-
-## Evidence & Traceability Rules
-- **Rule 1**: Every finding must cite one or more valid Evidence IDs from the Evidence Store.
-- **Rule 2**: If an external metric cannot be observed, mark as `Unknown / Unavailable` rather than `Failed`.
-- **Rule 3**: Never fabricate behavioral analytics (bounce rate, session duration) — infer engagement from observable UI/UX structure.

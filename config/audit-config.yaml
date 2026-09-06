@@ -2,6 +2,15 @@
 
 version: "0.2.0"
 
+crawl:
+  max_depth: 3
+  max_pages: 100
+  same_domain_only: true
+  respect_robots: true
+  request_timeout_seconds: 10
+  max_requests_per_second: 2
+  discover_sitemap: true
+
 crawler:
   user_agents:
     - "GPTBot"

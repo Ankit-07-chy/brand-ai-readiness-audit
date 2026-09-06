@@ -4,6 +4,24 @@ This matrix defines the complete audit taxonomy across the two primary dimension
 
 ---
 
+## Evaluation Flow Model
+
+Every skill check follows an explicit 4-stage analytical transformation chain:
+
+```
+Observation / Evidence
+ ➔ Finding
+ ➔ Severity
+ ➔ Recommendation
+```
+
+1. **Observation / Evidence**: Structured, un-summarized raw ground-truth collected from HTTP headers, DOM snapshots, JSON-LD, or `robots.txt` (e.g. `source_url`, `evidence_type`, `observed`, `location`).
+2. **Finding**: Evaluated result of a specific skill check (`check_id`, `title`, `status`, `description`), directly linked to its supporting evidence items.
+3. **Severity**: Standardized risk classification (`critical`, `high`, `medium`, `low`, `info`) reflecting the impact on search engines, AI models, and users.
+4. **Recommendation**: Actionable remediation guidance providing clear steps for engineering or content teams to resolve identified issues.
+
+---
+
 ## Architecture Overview & Audit Dimensions
 
 The audit evaluates brand digital presence along two primary axes:
